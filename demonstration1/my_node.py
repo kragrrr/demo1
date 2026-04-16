@@ -13,11 +13,9 @@ class my_node(Node):
         super().__init__('demo1_node')
         qos_policy = QoSProfile(durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
 
-        self.started = False
         self.exploring = False
         self.returning = False
         self.markers_seen = False
-        self.start_attempts = 0
         self.start_time = time.monotonic()
 
         self.explore_path = Path()
@@ -35,27 +33,21 @@ class my_node(Node):
         self.sub_odom = self.create_subscription(Odometry, '/odom', self.callback_odom, 10)
         self.sub_stack = self.create_subscription(MarkerArray, '/stack_points', self.callback_stack_points, 10)
 
-        self.start_timer = self.create_timer(1.0, self.check_start_time)
         self.get_logger().info('demo1_node started! Will send start command in 15 seconds...')
-
-    def check_start_time(self):
-        elapsed = time.monotonic() - self.start_time
-        if elapsed >= 15.0 and not self.started:
-            msg = String()
-            msg.data = 'start'
-            self.pub_cmd.publish(msg)
-            self.start_attempts += 1
-            self.get_logger().info(f'Start command sent (attempt {self.start_attempts})...')
-            if self.start_attempts >= 5:
-                self.started = True
-                self.exploring = True
-                self.start_timer.cancel()
-                self.get_logger().info('Exploration beginning!')
 
     def callback_map(self, data):
         self.pub_map.publish(data)
 
     def callback_odom(self, data):
+        if not self.exploring and not self.returning:
+            elapsed = time.monotonic() - self.start_time
+            if elapsed >= 15.0:
+                msg = String()
+                msg.data = 'start'
+                self.pub_cmd.publish(msg)
+                self.exploring = True
+                self.get_logger().info('Starting exploration')
+
         pose = PoseStamped()
         pose.header = data.header
         pose.pose = data.pose.pose
