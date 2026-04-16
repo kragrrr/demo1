@@ -1,6 +1,5 @@
 import rclpy
 from rclpy.node import Node
-import time
 from nav_msgs.msg import OccupancyGrid, Odometry, Path
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import MarkerArray
@@ -16,7 +15,7 @@ class my_node(Node):
         self.exploring = False
         self.returning = False
         self.markers_seen = False
-        self.start_time = time.monotonic()
+        self.time_passed = 0.0
 
         self.explore_path = Path()
         self.explore_path.header.frame_id = 'odom'
@@ -33,21 +32,22 @@ class my_node(Node):
         self.sub_odom = self.create_subscription(Odometry, '/odom', self.callback_odom, 10)
         self.sub_stack = self.create_subscription(MarkerArray, '/stack_points', self.callback_stack_points, 10)
 
-        self.get_logger().info('demo1_node started! Will send start command in 15 seconds...')
+        self.start_timer = self.create_timer(0.5, self.timer_callback)
+
+    def timer_callback(self):
+        self.time_passed += 0.5
+        if self.time_passed >= 15.0:
+            self.start_timer.cancel()
+            msg = String()
+            msg.data = 'start'
+            self.pub_cmd.publish(msg)
+            self.exploring = True
+            self.get_logger().info('Starting exploration')
 
     def callback_map(self, data):
         self.pub_map.publish(data)
 
     def callback_odom(self, data):
-        if not self.exploring and not self.returning:
-            elapsed = time.monotonic() - self.start_time
-            if elapsed >= 15.0:
-                msg = String()
-                msg.data = 'start'
-                self.pub_cmd.publish(msg)
-                self.exploring = True
-                self.get_logger().info('Starting exploration')
-
         pose = PoseStamped()
         pose.header = data.header
         pose.pose = data.pose.pose
