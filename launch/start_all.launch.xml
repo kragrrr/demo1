@@ -2,7 +2,7 @@
     <set_parameter name="use_sim_time" value="true" />
 
     <!-- SLAM -->
-    <include file="$(find-pkg-share nav2_bringup)/launch/slam_launch.py"/>
+    <include file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py"/>
 
     <!-- Navigation -->
     <include file="$(find-pkg-share ecte477)/launch/navigation_launch.py">
